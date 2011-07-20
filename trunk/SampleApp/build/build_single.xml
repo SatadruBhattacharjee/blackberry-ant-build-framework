@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2011 Satadru Bhattacharjee.
+  All rights reserved. This program and the accompanying materials
+  are made available under the terms of the Eclipse Public License v1.0
+  which accompanies this distribution, and is available at
+  http://www.eclipse.org/legal/epl-v10.html
+  
+  Contributors:
+      Satadru Bhattacharjee - initial API and implementation
+-->
+
+<project basedir=".." default="init" name="Ant for BlackBerry">
+
+	<taskdef name="rapc"    classpath="build/bb-ant-tools.jar" classname="ca.slashdev.bb.tasks.RapcTask" />
+	<taskdef name="jadtool" classpath="build/bb-ant-tools.jar" classname="ca.slashdev.bb.tasks.JadtoolTask" />
+	<taskdef name="alx"     classpath="build/bb-ant-tools.jar" classname="ca.slashdev.bb.tasks.AlxTask" />
+
+	<target name="init">		
+
+		<property name="dir.src"          value="src"  />
+
+		<property name="dir.lib"           value="lib"  />
+
+		<property name="dir.docs"          value="docs" />
+
+		<property name="dir.build"         value="build" />
+		
+		<property name="dir.res"         value="res" />
+		
+		<!-- get the value from prop file -->
+		<property name="dir.output.base" value="${basedir}/output" />
+
+		<property name="dir.output"      value="${dir.output.base}/${platform}" />
+
+		<property name="dir.output.rapc"          value="${dir.output}/rapc" />
+
+		<property name="dir.output.sign"          value="${dir.output}/sign" />
+
+		<property name="dir.output.release"       value="${dir.output}/release" />
+
+		<property name="dir.export"      value="${dir.output}/export" />
+
+		<property name="icon"            value="icon.png" />
+
+		<property name="icon_rollover"   value="icon.png" />
+
+		<!-- set the build directory -->
+		<property name="build.directory" value="${basedir}/buildapp">
+		</property>
+		<!-- cdlc means Rimlet -->
+		<property name="application.type" value="cldc">
+		</property>
+
+
+	</target>
+
+	<target name="clean" depends="init">
+		<delete dir="${dir.output}" />
+		<delete dir="${dir.export}" />
+		<delete dir="${build.directory}" />
+		<mkdir dir="${dir.output}"/>
+		<mkdir dir="${dir.output.rapc}"/>
+		<mkdir dir="${dir.output.sign}"/>
+		<mkdir dir="${dir.output.release}"/>
+		<mkdir dir="${dir.export}"/>
+	</target>
+
+
+	<target name="setup" depends="clean">
+		<description>
+	    		Create a build directory to hold exactly the source
+	    		and resource files for the selected device model.
+	    		
+	    		Then copy all the necesary files.
+	    	</description>
+
+		<!-- <echo message="creating ${size.icon} ${build.directory}\res"/> -->
+		<mkdir dir="${build.directory}\lib"/>
+		<mkdir dir="${build.directory}\res"/>
+		<mkdir dir="${build.directory}\src"/>
+		<mkdir dir="${build.directory}\docs"/>
+
+		<copy todir="${build.directory}\src">
+			<fileset dir="${basedir}\src"/>
+		</copy>
+		<copy file="${basedir}\icon\${size.icon}\icon.png"
+	              tofile="${build.directory}\img\icon.png"
+	        />
+		<copy todir="${build.directory}\img">
+			<fileset dir="${basedir}\img\${size.screen}"/>
+		</copy>
+		<copy todir="${build.directory}\res">
+			<fileset dir="${basedir}\${dir.res}"/>
+		</copy>
+	</target>
+
+
+	<target name="rapc" depends="setup">
+
+		<echo message="Compiling ${module.name} with rapc"/>	
+
+		<rapc jdehome="${rim.home}" quiet="true"
+	            srcdir="${build.directory}/${dir.src}"
+	            destdir="${dir.output.rapc}"
+	            output="${module.name}"
+	            verbose="true"
+	            nodebug="false">
+
+			<!-- define preprocessor tag -->
+			<define tag="RIM_${rim.version}"/>
+			<define tag="SCREEN_${size.screen}"/>
+			<define tag="LOG_CONSOLE" if="log_console" />
+
+			<jdp type="${application.type}" title="${project.title}"
+	        				                 icon="../img/icon.png" />
+			<src>
+				<fileset dir="${build.directory}/${dir.src}">
+					<include name="**/*java"/>
+				</fileset>
+				<fileset dir="${build.directory}/${dir.lib}">
+					<include name="**/*.jar"/>
+				</fileset>
+				<fileset dir="${build.directory}/${dir.lib}">
+					<include name="**/*.jar"/>
+				</fileset>
+			</src>
+			
+			<src path="${basedir}/res" />
+
+			<import>
+				<fileset dir="${rim.home}/lib/">
+					<include name="**/*.jar"/>
+				</fileset>
+			</import>
+		</rapc>
+	</target>
+
+	<target name="sign" depends="rapc">
+		<copy todir="${dir.output.sign}">
+			<fileset dir="${dir.output.rapc}">
+				<include name="**/*"/>
+			</fileset>
+		</copy>
+
+		<echo message="Please sign the .cod file located at ${dir.output.sign}" />
+
+		<java jar="${rim.home}/bin/SignatureTool.jar" failonerror="false" fork="true">
+			<arg value="-a"/>
+			<arg value="-p"/>
+			<arg value="${bb.sigtool.password}"/>
+			<arg value="-C"/>
+			<arg file="${dir.output.sign}/${module.name}.cod"/>
+		</java>
+
+	</target>
+
+	<target name="jad">
+		<!-- propertyfile file="build/release.properties">
+	            <entry key="build.date" type="date" value="now" pattern="yyyyMMdd"/>
+	        </propertyfile -->
+
+		<!-- add the additional props into jad file to activate the storm compatibility mode -->
+		<copy todir="${dir.output.sign}" file="${basedir}/${dir.build}/additional.jad" />
+		<exec executable="${rim.home}/bin/UpdateJad.exe" dir="${dir.output.sign}" failonerror="true">
+			<arg value="${module.name}.jad" />
+			<arg value="additional.jad" />
+		</exec>
+
+
+		<copy todir="${dir.output.release}">
+			<fileset dir="${dir.output.sign}">
+				<include name="**/*"/>
+				<exclude name="*.debug"/>
+			</fileset>
+		</copy>
+		<copy todir="${dir.output.release}/docs">
+			<fileset dir="${dir.docs}">
+				<include name="**/*"/>
+			</fileset>
+		</copy>
+
+		<jadtool input="${dir.output.sign}/${module.name}.jad" destdir="${dir.output.release}/ota">
+			<fileset dir="${dir.output.sign}" includes="*.cod" />
+		</jadtool>
+
+	</target>
+
+	<target name="alx" depends="init">
+		<!-- copy the the cod files from OTA dir to Alx dir -->
+		<copy todir="${dir.output.release}/alx">
+			<fileset dir="${dir.output.release}/ota">
+				<include name="*.cod"/>
+			</fileset>
+		</copy>
+
+		<alx destdir="${dir.output.release}/alx" filename="${module.name}.alx">
+			<application id="com.interrait.bb.${module.release.prefix}" name="${module.fullname}"
+	                         description="${module.desc}"
+	                         version="${module.version}"
+	                         vendor="${module.company}">
+				<codset>
+					<fileset dir="${dir.output.release}/alx" includes="*.cod" />
+				</codset>
+			</application>
+		</alx>
+
+		<zip zipfile="${dir.output.release}/alx/${module.name}_${platform}_${model}_${size.screen}_rev${module.version}.zip">
+			<zipfileset dir="${dir.output.release}/alx" includes="*.cod, *.alx" />
+		</zip>
+	</target>
+
+	<target name="release" depends="init,sign,jad,alx">
+		<zip zipfile="${dir.output.release}/ota/${module.name}_${platform}_${model}_${size.screen}_rev${module.version}.zip">
+			<zipfileset dir="${dir.output.release}/ota" includes="*.jad, *.cod, *.alx" />
+		</zip>
+	</target>
+
+	<target name="all" depends="release,export" />
+
+	<target name="export" depends="clean">
+
+		<copy todir="${dir.export}/${dir.src}" preservelastmodified="true">
+			<fileset dir="${dir.src}/"/>
+		</copy>
+
+
+		<copy todir="${dir.export}/${dir.lib}" preservelastmodified="true">
+			<fileset dir="${dir.lib}/"/>
+		</copy>
+
+		<copy todir="${dir.export}/${dir.docs}" preservelastmodified="true">
+			<fileset dir="${dir.docs}/"/>
+		</copy>
+
+		<copy todir="${dir.export}/${dir.build}" preservelastmodified="true">
+			<fileset dir="${dir.build}/"/>
+		</copy>
+
+		<zip destfile="${dir.export}/${module.name}-src-${module.version}.zip">
+			<zipfileset dir="${dir.export}" prefix="${module.release.prefix}"/>
+		</zip>
+
+	</target>
+
+</project>
