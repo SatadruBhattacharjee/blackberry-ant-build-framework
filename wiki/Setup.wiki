@@ -1,8 +1,10 @@
-#summary One-sentence summary of this page.
+#How to setup your Blackberry Projects.
 
 = Introduction =
 
-Add your content here.
+*Follow the below steps*
+
+
 
 
 = Details =
