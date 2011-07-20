@@ -1,15 +1,15 @@
-#How to setup your Blackberry Projects.
+#How to setup your Blackberry Projects
 
 = Introduction =
 
 *Follow the below steps*
 
-1 Checkout the Sample Project from the Source
-2 Modify the local.properties file as per your development settings
-3 Go to <Project>/Build folder
-4 Execute "Ant usage" - To see the Available targets
-  a) Releasing for all OS execute "Ant release" in command prompt
-  b) Testing for all OS execute "Ant simulator" in command prompt    
+* Checkout the Sample Project from the Source
+* Modify the local.properties file as per your development settings
+* Go to <Project>/Build folder
+* Execute "Ant usage" - To see the Available targets
+* Releasing for all OS execute "Ant release" in command prompt
+* Testing for all OS execute "Ant simulator" in command prompt    
 
 
 
